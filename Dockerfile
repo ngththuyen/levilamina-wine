@@ -2,6 +2,13 @@ FROM ghcr.io/ptero-eggs/yolks:wine_latest
 
 USER root
 
+# Setup permissions (using existing user from base image)
+RUN chown -R root:root /home/container
+
+USER container
+ENV USER=container HOME=/home/container
+WORKDIR /home/container
+
 # Install dependencies including dbus and X11 utilities
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
