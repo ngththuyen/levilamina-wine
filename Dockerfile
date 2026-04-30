@@ -39,26 +39,22 @@ RUN export DISPLAY=:0 && \
     pkill -f Xvfb ; \
     pkill -f dbus-daemon
 
-# Install Python 3.10 in Wine
+# Install Python 3.10 in Wine and setup pip
 RUN export DISPLAY=:0 && \
     export XDG_RUNTIME_DIR=/tmp/runtime-container && \
     Xvfb :0 -screen 0 1024x768x16 > /dev/null 2>&1 & \
     sleep 2 && \
     dbus-daemon --session --address=unix:path=/tmp/runtime-container/bus --nofork --nopidfile > /dev/null 2>&1 & \
     sleep 1 && \
-    winetricks -q python310 ; \
+    winetricks -q python310 && \
+    wine python -m ensurepip --upgrade && \
+    wine python -m pip install --upgrade pip && \
+    wine python -m pip install levistone --target /home/container/plugins/EndstoneRuntime ; \
     pkill -f Xvfb ; \
     pkill -f dbus-daemon
 
-# Install pip
-RUN wine python -m ensurepip --upgrade && \
-    wine python -m pip install --upgrade pip
-
 # Create plugins directory
 RUN mkdir -p /home/container/plugins/EndstoneRuntime
-
-# Install levistone
-RUN wine python -m pip install levistone --target /home/container/plugins/EndstoneRuntime
 
 # Setup permissions
 RUN chown -R container:container /home/container
