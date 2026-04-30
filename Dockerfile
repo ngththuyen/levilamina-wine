@@ -2,21 +2,16 @@ FROM ghcr.io/ptero-eggs/yolks:wine_latest
 
 USER root
 
-# Setup permissions (using existing user from base image)
-RUN chown -R root:root /home/container
-
-USER container
-ENV USER=container HOME=/home/container
-WORKDIR /home/container
-
-# Install dependencies including dbus and X11 utilities
+# Install dependencies (PHẢI là root)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         lsb-release \
         dbus \
         dbus-x11 \
         xvfb \
-        x11-utils && \
+        x11-utils \
+        wget \
+        cabextract && \
     rm -rf /var/lib/apt/lists/*
 
 # Setup Wine prefix and display
@@ -35,35 +30,31 @@ RUN wget -q -O /tmp/mono.msi https://dl.winehq.org/wine/wine-mono/9.1.0/wine-mon
     WINEDLLOVERRIDES="mscoree,mshtml=" wine msiexec /i /tmp/mono.msi /qn /quiet /norestart && \
     rm /tmp/mono.msi
 
-# Setup virtual display and install .NET with proper dbus-daemon
+# Setup virtual display and install .NET 9
 RUN export DISPLAY=:0 && \
     export XDG_RUNTIME_DIR=/tmp/runtime-container && \
     Xvfb :0 -screen 0 1024x768x16 > /dev/null 2>&1 & \
-    sleep 2 && \
+    sleep 3 && \
     dbus-daemon --session --address=unix:path=/tmp/runtime-container/bus --nofork --nopidfile > /dev/null 2>&1 & \
-    sleep 1 && \
-    winetricks -q dotnet9 ; \
-    pkill -f Xvfb ; \
-    pkill -f dbus-daemon
+    sleep 2 && \
+    winetricks -q dotnet9
 
-# Install Python 3.10 in Wine and setup pip
+# Install Python 3.10, pip, and levistone
 RUN export DISPLAY=:0 && \
     export XDG_RUNTIME_DIR=/tmp/runtime-container && \
     Xvfb :0 -screen 0 1024x768x16 > /dev/null 2>&1 & \
-    sleep 2 && \
+    sleep 3 && \
     dbus-daemon --session --address=unix:path=/tmp/runtime-container/bus --nofork --nopidfile > /dev/null 2>&1 & \
-    sleep 1 && \
+    sleep 2 && \
     winetricks -q python310 && \
     wine python -m ensurepip --upgrade && \
     wine python -m pip install --upgrade pip && \
-    wine python -m pip install levistone --target /home/container/plugins/EndstoneRuntime ; \
-    pkill -f Xvfb ; \
-    pkill -f dbus-daemon
+    wine python -m pip install levistone --target /home/container/plugins/EndstoneRuntime
 
-# Create plugins directory
+# Create plugins directory (đảm bảo tồn tại)
 RUN mkdir -p /home/container/plugins/EndstoneRuntime
 
-# Setup permissions
+# Setup permissions (CHỈ chuyển user ở cuối)
 RUN chown -R container:container /home/container
 
 USER container
